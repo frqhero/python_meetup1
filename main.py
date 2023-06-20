@@ -1,8 +1,8 @@
 import os
 
 from environs import Env
-from telegram import ReplyKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram import ReplyKeyboardMarkup, ParseMode, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
 import django
 
 
@@ -10,6 +10,13 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
 django.setup()
 
 from bot.models import Question
+
+MAIN_MENU = 'Добро пожаловать!'
+
+ABOUT_BUTTON = 'Что я могу?'
+ABOUT_MENU_MARKUP = InlineKeyboardMarkup([[
+    InlineKeyboardButton(ABOUT_BUTTON, callback_data=ABOUT_BUTTON)
+]])
 
 
 def start(update, context):
@@ -32,6 +39,27 @@ def caps(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text=text_caps)
 
 
+def menu(update, context):
+    context.bot.send_message(
+        update.message.from_user.id,
+        MAIN_MENU,
+        parse_mode=ParseMode.HTML,
+        reply_markup=ABOUT_MENU_MARKUP
+    )
+
+
+def button_tap(update, context):
+    data = update.callback_query.data
+    text = 'Ничего'
+
+    update.callback_query.answer()
+    update.callback_query.message.edit_text(
+        text,
+        ParseMode.HTML,
+        reply_markup=None
+    )
+
+
 if __name__ == '__main__':
     env = Env()
     env.read_env()
@@ -47,6 +75,9 @@ if __name__ == '__main__':
 
     caps_handler = CommandHandler('caps', caps)
     dispatcher.add_handler(caps_handler)
+
+    dispatcher.add_handler(CommandHandler("menu", menu))
+    dispatcher.add_handler(CallbackQueryHandler(button_tap))
 
     updater.start_polling()
     # print('Количество пропусков:', Question.objects.count())
